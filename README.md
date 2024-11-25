@@ -26,8 +26,8 @@ Assurez-vous d’avoir installé les outils suivants :
 
 ### **2. Cloner le projet**
 ```bash
-git clone https://github.com/username/athlatlas-backend.git
-cd athlatlas-backend
+git clone https://github.com/e-lglioui/AthlAtlas.git
+cd athlatlas
 ```
 ### * 3 Installer les dépendances**
 ```bash
