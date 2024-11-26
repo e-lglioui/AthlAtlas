@@ -89,4 +89,30 @@ describe(' EventController',() => {
         expect(MockeEventService.getAllEvent).toHaveBeenCalled();
     })
   })
+  describe('getEventById',()=>{
+   
+    it('shoud return a event',async()=>{
+        MockeEventService.findById.mockResolvedValue(mockEvent);
+        const result=await controller.getEventById('event-id-1');
+        expect(result).toBe(mockEvent)
+        expect(service.findById).toHaveBeenCalled;
+        expect(MockeEventService.findById).toHaveBeenCalled;
+    })
+    it('it shoud trow error si id nont found',async()=>{
+        MockeEventService.findById.mockRejectedValue(
+            new NotFoundException ('event-1')
+          );
+          await expect(controller.getEventById('event-1')).rejects.toThrow(
+            NotFoundException
+          );
+          expect(MockeEventService.findById).toHaveBeenCalledWith('event-1');
+    })
+    it('should handle invalid id format', async () => {
+        MockeEventService.findById.mockRejectedValue(
+          new Error('Invalid ID format')
+        );
+        await expect(controller.getEventById('invalid-id')).rejects.toThrow();
+        expect(MockeEventService.findById).toHaveBeenCalledWith('invalid-id');
+      });
+  })
 })
