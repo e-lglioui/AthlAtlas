@@ -88,27 +88,9 @@ export class UserService implements IUserService {
     return updatedUser;
   }
 
-  /**
-   * Updates a user's online status
-   * @param userId - ID of the user to update
-   * @param isOnline - New online status
-   * @throws UserNotFoundException if user not found
-   * @returns Promise containing the updated user
-   */
-  async updateOnlineStatus(userId: string, isOnline: boolean): Promise<User> {
-    const user = await this.userRepository.updateOnlineStatus(userId, isOnline);
-    this.validateUserExists(user);
-    return user;
-  }
 
-  /**
-   * Validates user credentials for authentication
-   * @param email - User's email
-   * @param password - User's password to verify
-   * @throws UserNotFoundException if user not found
-   * @throws InvalidCredentialsException if password is invalid
-   * @returns Promise containing the authenticated user
-   */
+
+
   async validateCredentials(email: string, password: string): Promise<User> {
     const user = await this.userRepository.findByCredentials(email);
     this.validateUserExists(user);
@@ -143,8 +125,7 @@ export class UserService implements IUserService {
     const user = await this.userRepository.create({
       ...createUserDto,
       password: hashedPassword,
-      isOnline: false,
-      lastSeen: new Date(),
+
     });
 
     await this.profileService.createProfile({

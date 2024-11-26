@@ -33,7 +33,6 @@ export class ProfileService implements IProfileService {
     return this.profileRepository.create({
       ...createProfileDto,
       theme: 'light',
-      isBlocked: false,
     });
   }
 
@@ -55,18 +54,5 @@ export class ProfileService implements IProfileService {
     return updatedProfile;
   }
 
-  /**
-   * Updates a user's profile block status
-   * @param userId - The user's ID
-   * @param isBlocked - The new block status (true/false)
-   * @throws ProfileNotFoundException if the profile doesn't exist
-   * @returns The updated profile with the new block status
-   */
-  async updateBlockStatus(userId: string, isBlocked: boolean): Promise<Profile> {
-    const profile = await this.profileRepository.updateBlockStatus(userId, isBlocked);
-    if (!profile) {
-      throw new ProfileNotFoundException();
-    }
-    return profile;
-  }
+
 }

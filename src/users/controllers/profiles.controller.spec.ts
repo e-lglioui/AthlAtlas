@@ -24,7 +24,6 @@ describe('ProfilesController', () => {
     const mockProfileService = {
       findProfileByUserId: jest.fn(),
       updateProfile: jest.fn(),
-      updateBlockStatus: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -74,19 +73,5 @@ describe('ProfilesController', () => {
     });
   });
 
-  describe('updateBlockStatus', () => {
-    it('should update block status', async () => {
-      const isBlocked = true;
-      const updatedProfile = {
-        ...TEST_PROFILE,
-        isBlocked,
-      } as unknown as Profile;
-      profileService.updateBlockStatus.mockResolvedValue(updatedProfile);
 
-      const result = await controller.updateBlockStatus(TEST_USER_ID, isBlocked);
-
-      expect(profileService.updateBlockStatus).toHaveBeenCalledWith(TEST_USER_ID, isBlocked);
-      expect(result).toEqual(updatedProfile);
-    });
-  });
 });

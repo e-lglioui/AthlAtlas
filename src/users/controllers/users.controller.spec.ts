@@ -17,7 +17,7 @@ describe('UsersController', () => {
     findByEmail: jest.fn(),
     findByUsername: jest.fn(),
     findById: jest.fn(),
-    updateOnlineStatus: jest.fn(),
+   
   };
 
   const completeUser: Partial<User> = {
@@ -25,8 +25,7 @@ describe('UsersController', () => {
     username: 'John Doe',
     email: 'john@example.com',
     password: 'hashedPassword',
-    isOnline: false,
-    lastSeen: new Date(),
+  
   };
 
   beforeEach(async () => {
@@ -134,14 +133,5 @@ describe('UsersController', () => {
     });
   });
 
-  describe('updateOnlineStatus', () => {
-    it('should update and return the user online status', async () => {
-      const user: User = { ...completeUser, isOnline: true } as User;
-      userService.updateOnlineStatus.mockResolvedValue(user);
 
-      const result = await controller.updateOnlineStatus('1', true);
-      expect(result).toEqual(user);
-      expect(userService.updateOnlineStatus).toHaveBeenCalledWith('1', true);
-    });
-  });
 });

@@ -36,14 +36,4 @@ export class ProfilesController {
     return profile;
   }
 
-  @Put(':userId/block')
-  @ApiOperation({ summary: 'Update block status by user ID' })
-  @ApiResponse({
-    status: 200,
-    description: 'The block status has been successfully updated.',
-  })
-  @ApiResponse({ status: 404, description: 'Profile not found.' })
-  async updateBlockStatus(@Param('userId') userId: string, @Body('isBlocked') isBlocked: boolean) {
-    return this.profileService.updateBlockStatus(userId, isBlocked);
-  }
 }
