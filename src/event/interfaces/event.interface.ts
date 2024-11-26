@@ -8,4 +8,5 @@ findById(id: string): Promise<Event>;
 findByName(name: string): Promise<Event>;
 createEvent(CreateEventDto: CreateEventDto): Promise<Event>;
 updateEvent(eventId: string, UpdateEventDto: UpdateEventDto): Promise<Event>;
+deleteEvent(eventId: string): Promise<Event>; 
  }
