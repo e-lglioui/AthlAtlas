@@ -5,7 +5,7 @@ import { EventService } from '../providers/event.service';
 import { Event } from '../schemas/event.schema';
 import { CreateEventDto } from '../dtos/create-event.dto';
 import { UpdateEventDto } from '../dtos/update-event.dto';
-import {EventNotFoundException} from '../exceptions/event.exception'
+import {EventNotFoundException ,EventNameConflictException ,InvalidEventDateException} from '../exceptions/event.exception'
 describe(' EventController',() => {
  let controller :EventController;
  let service: jest.Mocked<EventService>; 
@@ -122,8 +122,7 @@ describe(' EventController',() => {
         expect(result).toEqual(mockEvent);
         expect(MockeEventService.findByName).toHaveBeenCalledWith('Test Event');
       });
-    })
-    it('should throw NotFoundException when event is not found', async () => {
+      it('should throw NotFoundException when event is not found', async () => {
         
         MockeEventService.findByName.mockRejectedValue(
           new EventNotFoundException("Event with name 'Invalid Event' not found")
@@ -147,4 +146,105 @@ describe(' EventController',() => {
         
         expect(MockeEventService.findByName).toHaveBeenCalledWith('');
       });
+    })
+  
+      describe('createEvent', () => {
+        const mockCreateEventDto = {
+            userId: '64d1f83bfc13ae1c4b000001',  
+            name: 'Annual Tech Conference',
+            bio: 'A gathering of tech enthusiasts to discuss the latest trends.',
+            participantnbr: 200,
+            startDate: new Date('2024-12-25T10:00:00Z'),
+            endDate: new Date('2024-12-25T18:00:00Z'),
+        };
+    
+        const mockCreatedEvent = {
+          _id: 'event-123',
+          ...mockCreateEventDto,
+          participants: [],
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+    
+        it('should create a new event successfully', async () => {
+         
+          MockeEventService.createEvent.mockResolvedValue(mockCreatedEvent);
+    
+          const result = await controller.createEvent(mockCreateEventDto);
+    
+          
+          expect(result).toEqual(mockCreatedEvent);
+          expect(MockeEventService.createEvent).toHaveBeenCalledWith(mockCreateEventDto);
+        });
+    
+        it('should throw EventNameConflictException when event name already exists', async () => {
+        
+          MockeEventService.createEvent.mockRejectedValue(
+            new EventNameConflictException("Event with name 'Nouveau Marathon' already exists")
+          );
+    
+          
+          await expect(
+            controller.createEvent(mockCreateEventDto)
+          ).rejects.toThrow(EventNameConflictException);
+          
+          expect(MockeEventService.createEvent).toHaveBeenCalledWith(mockCreateEventDto);
+        });
+    
+        it('should throw InvalidEventDateException when end date is before start date', async () => {
+          const invalidDateDto = {
+            ...mockCreateEventDto,
+            startDate: new Date('2024-06-02'),
+            endDate: new Date('2024-06-01') 
+          };
+    
+          
+          MockeEventService.createEvent.mockRejectedValue(
+            new InvalidEventDateException(
+              invalidDateDto.startDate.toISOString(),
+              invalidDateDto.endDate.toISOString()
+            )
+          );
+    
+        
+          await expect(
+            controller.createEvent(invalidDateDto)
+          ).rejects.toThrow(InvalidEventDateException);
+        });
+    
+        it('should validate required fields', async () => {
+          const incompleteDto = {
+            name: 'Test Event'
+            // Manque les champs requis
+          };
+    
+         
+          MockeEventService.createEvent.mockRejectedValue(
+            new Error('Missing required fields')
+          );
+    
+        
+          await expect(
+            controller.createEvent(incompleteDto as CreateEventDto)
+          ).rejects.toThrow();
+        });
+    
+        it('should handle maximum participants validation', async () => {
+          const invalidMaxParticipantsDto = {
+            ...mockCreateEventDto,
+            maxParticipants: -1 
+          };
+    
+         
+          MockeEventService.createEvent.mockRejectedValue(
+            new Error('Maximum participants must be a positive number')
+          );
+    
+          await expect(
+            controller.createEvent(invalidMaxParticipantsDto)
+          ).rejects.toThrow();
+        });
+    
+    });
 })
+
