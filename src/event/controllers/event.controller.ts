@@ -7,20 +7,25 @@ import {
     Body, 
     Param, 
     Query, 
-    NotFoundException 
+    NotFoundException ,
+    UseGuards
   } from '@nestjs/common';
   import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
   import { EventService } from '../providers/event.service';
   import { CreateEventDto } from '../dtos/create-event.dto';
   import { UpdateEventDto } from '../dtos/update-event.dto';
   import { Event } from '../schemas/event.schema';
-  
+  import {JwtAuthGuard}from '../../auth/guards/jwt-auth.guard';
+  import {EventOwnerGuard}from '../guards/eventowner.guard';
+
+
   @ApiTags('events')
   @Controller('events')
   export class EventController {
     constructor(private readonly eventService: EventService) {}
   
     @Get()
+    @UseGuards(JwtAuthGuard) 
     @ApiOperation({ summary: 'Get all events' })
     @ApiResponse({ status: 200, description: 'Return all events.', type: [Event] })
     async getAllEvents(): Promise<Event[]> {
@@ -63,6 +68,7 @@ import {
     }
   
     @Put(':id')
+    @UseGuards(JwtAuthGuard, EventOwnerGuard)
     @ApiOperation({ summary: 'Update an event' })
     @ApiResponse({
       status: 200,
@@ -78,6 +84,7 @@ import {
     }
   
     @Delete(':id')
+    @UseGuards(JwtAuthGuard, EventOwnerGuard)
     @ApiOperation({ summary: 'Delete an event' })
     @ApiResponse({
       status: 200,
