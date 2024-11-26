@@ -5,7 +5,7 @@ import { EventService } from '../providers/event.service';
 import { Event } from '../schemas/event.schema';
 import { CreateEventDto } from '../dtos/create-event.dto';
 import { UpdateEventDto } from '../dtos/update-event.dto';
-
+import {EventNotFoundException} from '../exceptions/event.exception'
 describe(' EventController',() => {
  let controller :EventController;
  let service: jest.Mocked<EventService>; 
@@ -115,4 +115,36 @@ describe(' EventController',() => {
         expect(MockeEventService.findById).toHaveBeenCalledWith('invalid-id');
       });
   })
+  describe('findEventByName',() =>{
+    it('should return an event when found by name', async () => {
+        MockeEventService.findByName.mockResolvedValue(mockEvent);
+        const result = await controller.findEventByName('Test Event');
+        expect(result).toEqual(mockEvent);
+        expect(MockeEventService.findByName).toHaveBeenCalledWith('Test Event');
+      });
+    })
+    it('should throw NotFoundException when event is not found', async () => {
+        
+        MockeEventService.findByName.mockRejectedValue(
+          new EventNotFoundException("Event with name 'Invalid Event' not found")
+        );
+        
+        await expect(
+          controller.findEventByName('Invalid Event')
+        ).rejects.toThrow(EventNotFoundException);
+        
+        expect(MockeEventService.findByName).toHaveBeenCalledWith('Invalid Event');
+      });
+       it('should handle empty name parameter', async () => {
+        
+        MockeEventService.findByName.mockRejectedValue(
+          new Error('Event name cannot be empty')
+        );
+         
+        await expect(
+          controller.findEventByName('')
+        ).rejects.toThrow();
+        
+        expect(MockeEventService.findByName).toHaveBeenCalledWith('');
+      });
 })
