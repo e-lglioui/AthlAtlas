@@ -82,15 +82,5 @@ export class UsersController {
     return user;
   }
 
-  @Put(':id/status')
-  @ApiOperation({ summary: 'Update user online status' })
-  @ApiResponse({
-    status: 200,
-    description: 'The user online status has been successfully updated.',
-    type: User,
-  })
-  @ApiResponse({ status: 404, description: 'User not found.' })
-  async updateOnlineStatus(@Param('id') id: string, @Body('isOnline') isOnline: boolean) {
-    return this.userService.updateOnlineStatus(id, isOnline);
-  }
+
 }

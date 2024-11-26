@@ -14,8 +14,6 @@ describe('UserService', () => {
     username: 'testuser',
     email: 'test@example.com',
     password: 'hashedPassword123',
-    isOnline: false,
-    lastSeen: new Date(),
   } as const;
 
   const mockUserRepo = {
@@ -26,7 +24,6 @@ describe('UserService', () => {
     findByCredentials: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
-    updateOnlineStatus: jest.fn(),
     exists: jest.fn(),
   };
 
@@ -90,9 +87,7 @@ describe('UserService', () => {
         expect.objectContaining({
           username: createUserDto.username,
           email: createUserDto.email,
-          isOnline: false,
           password: expect.any(String),
-          lastSeen: expect.any(Date),
         }),
       );
       expect(mockProfileService.createProfile).toHaveBeenCalled();
