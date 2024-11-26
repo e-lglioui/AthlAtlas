@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { IEventService } from '../interfaces/event.interface';
 import { EventRepository } from '../repositories/event.repository';
 import { Event } from '../schemas/event.schema';
@@ -9,10 +9,16 @@ import {
   EventNameConflictException, 
   InvalidEventDateException, 
 } from '../exceptions/event.exception';
+import { ExportService } from '../../participants/services/export.service';
+import { ParticipantService } from '../../participants/providers/sparticipant.service';
 
 @Injectable()
 export class EventService implements IEventService {
-  constructor(private readonly eventRepository: EventRepository) {}
+  constructor(
+    private readonly eventRepository: EventRepository,
+    private readonly exportService: ExportService,
+    private readonly participantService: ParticipantService,
+  ) {}
 
   async getAllEvent(): Promise<Event[]> {
     return this.eventRepository.getAllEvents();
@@ -80,5 +86,18 @@ export class EventService implements IEventService {
     }
 
     return this.eventRepository.deleteEvent(eventId);
+  }
+
+  async exportParticipants(eventId: string): Promise<string> {
+    const event = await this.findById(eventId);
+    if (!event) {
+      throw new NotFoundException(`Event with ID ${eventId} not found`);
+    }
+
+    // Récupérer tous les participants de l'événement
+    const participants = await this.participantService.getParticipantsByEventId(eventId);
+    
+    // Générer le fichier CSV
+    return this.exportService.exportParticipantsToCSV(participants, eventId);
   }
 }

@@ -8,7 +8,8 @@ import {
     Param, 
     Query, 
     NotFoundException ,
-    UseGuards
+    UseGuards,
+    Res
   } from '@nestjs/common';
   import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
   import { EventService } from '../providers/event.service';
@@ -17,6 +18,8 @@ import {
   import { Event } from '../schemas/event.schema';
   import {JwtAuthGuard}from '../../auth/guards/jwt-auth.guard';
   import {EventOwnerGuard}from '../guards/eventowner.guard';
+  import { Response } from 'express';
+  import * as fs from 'fs';
 
 
   @ApiTags('events')
@@ -94,6 +97,32 @@ import {
     @ApiResponse({ status: 404, description: 'Event not found.' })
     async deleteEvent(@Param('id') id: string): Promise<Event> {
       return this.eventService.deleteEvent(id);
+    }
+  
+    @Get(':id/registrations/export')
+    async exportParticipants(
+      @Param('id') id: string,
+      @Res() res: Response,
+    ) {
+      try {
+        const filePath = await this.eventService.exportParticipants(id);
+        
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader(
+          'Content-Disposition',
+          `attachment; filename=event-${id}-participants.csv`,
+        );
+
+        const fileStream = fs.createReadStream(filePath);
+        fileStream.pipe(res);
+
+        // Supprimer le fichier après l'envoi
+        fileStream.on('end', () => {
+          fs.unlinkSync(filePath);
+        });
+      } catch (error) {
+        res.status(404).json({ message: error.message });
+      }
     }
   }
   

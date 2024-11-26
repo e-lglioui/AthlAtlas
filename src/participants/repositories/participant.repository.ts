@@ -80,4 +80,10 @@ export class ParticipantRepository implements IParticipantRepository {
       .populate('events')
       .exec();
   }
+
+  async findByEventId(eventId: string): Promise<Participant[]> {
+    return this.participantModel
+      .find({ events: eventId })
+      .exec();
+  }
 }
