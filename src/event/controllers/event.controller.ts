@@ -39,7 +39,7 @@ import {
       return this.eventService.findById(id);
     }
   
-    @Get('/search')
+    @Get('ev/search')
     @ApiOperation({ summary: 'Search event by name' })
     @ApiResponse({
       status: 200,

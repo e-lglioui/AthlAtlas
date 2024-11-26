@@ -7,8 +7,7 @@ import databaseConfig from './config/database.config';
 import {AuthModule} from './auth/auth.module';
 import {UsersModule} from './users/users.module'
 import { ErrorHandlerMiddleware } from './common/middlewares/error-handler.middleware';
-
-// import {}
+import {EventsModule}from './event/event.module'
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -19,12 +18,12 @@ import { ErrorHandlerMiddleware } from './common/middlewares/error-handler.middl
     DatabaseModule,
     AuthModule,
     UsersModule,
-   
+    EventsModule,
   ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    // Appliquer le middleware à toutes les routes
+   
     consumer.apply(ErrorHandlerMiddleware).forRoutes('*');
   }
 }
