@@ -70,4 +70,8 @@ export class ParticipantService implements IParticipantService {
   async leaveEvent(participantId: string, eventId: string): Promise<Participant> {
     return this.participantRepository.removeEvent(participantId, eventId);
   }
+
+  async getParticipantsByEventId(eventId: string): Promise<Participant[]> {
+    return this.participantRepository.findByEventId(eventId);
+  }
 }

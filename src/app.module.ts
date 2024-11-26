@@ -7,7 +7,8 @@ import databaseConfig from './config/database.config';
 import {AuthModule} from './auth/auth.module';
 import {UsersModule} from './users/users.module'
 import { ErrorHandlerMiddleware } from './common/middlewares/error-handler.middleware';
-import {EventsModule}from './event/event.module'
+import {EventModule}from './event/event.module'
+import {ParticipantModule} from './participants/participant.module'
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -18,7 +19,8 @@ import {EventsModule}from './event/event.module'
     DatabaseModule,
     AuthModule,
     UsersModule,
-    EventsModule,
+    EventModule,
+    ParticipantModule,
   ],
 })
 export class AppModule implements NestModule {

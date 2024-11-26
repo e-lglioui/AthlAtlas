@@ -32,6 +32,9 @@ export class Participant extends Document {
     default: [],
   })
   events: MongooseSchema.Types.ObjectId[];
+
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export const ParticipantSchema = SchemaFactory.createForClass(Participant); 
