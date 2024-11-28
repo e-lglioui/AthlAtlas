@@ -11,7 +11,7 @@ import {
 } from '../exceptions/event.exception';
 import { ExportService } from '../../participants/services/export.service';
 import { ParticipantService } from '../../participants/providers/sparticipant.service';
-
+import { Participant } from '../../participants/schemas/participant.schema'; 
 @Injectable()
 export class EventService implements IEventService {
   constructor(
@@ -99,5 +99,12 @@ export class EventService implements IEventService {
     
     // Générer le fichier CSV
     return this.exportService.exportParticipantsToCSV(participants, eventId);
+  }
+  async getEventParticipant(eventId: string): Promise<Participant[]> {  
+    const event = await this.findById(eventId);
+    if (!event) {
+      throw new NotFoundException(`Event with ID ${eventId} not found`);
+    }
+     return this.participantService.getParticipantsByEventId(eventId);
   }
 }

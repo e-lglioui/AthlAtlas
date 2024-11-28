@@ -11,7 +11,7 @@ import {
     UseGuards,
     Res
   } from '@nestjs/common';
-  import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+  import { ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
   import { EventService } from '../providers/event.service';
   import { CreateEventDto } from '../dtos/create-event.dto';
   import { UpdateEventDto } from '../dtos/update-event.dto';
@@ -20,7 +20,7 @@ import {
   import {EventOwnerGuard}from '../guards/eventowner.guard';
   import { Response } from 'express';
   import * as fs from 'fs';
-
+  import { Participant } from '../../participants/schemas/participant.schema';
 
   @ApiTags('events')
   @Controller('events')
@@ -124,5 +124,23 @@ import {
         res.status(404).json({ message: error.message });
       }
     }
+  @Get(':id/participants')
+ @UseGuards(JwtAuthGuard)
+ @ApiOperation({ summary: 'Get all participants for an event' })
+ @ApiParam({ name: 'id', description: 'Event ID' })
+ @ApiResponse({ 
+   status: 200, 
+   description: 'Return all participants for the specified event.',
+   type: [Participant]
+ })
+ @ApiResponse({ 
+   status: 404, 
+   description: 'Event not found.'
+ })
+ async getEventParticipant(
+   @Param('id') id: string
+ ): Promise<Participant[]> {
+   return this.eventService.getEventParticipant(id);
+ }
   }
   
