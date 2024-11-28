@@ -9,7 +9,7 @@ import {  Document, Schema as MongooseSchema } from 'mongoose';
         type: MongooseSchema.Types.ObjectId,
         ref: 'User',
         required: true,
-        unique: true,
+        index: true 
       })
       userId: MongooseSchema.Types.ObjectId;
       @Prop({
@@ -22,6 +22,9 @@ import {  Document, Schema as MongooseSchema } from 'mongoose';
 
     @Prop({required:true})
     participantnbr:number;
+
+    @Prop({required:true})
+    prix:number;
 
   @Prop({
     type: Date,

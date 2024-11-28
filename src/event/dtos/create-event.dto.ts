@@ -37,6 +37,9 @@ export class CreateEventDto {
   @IsNumber()
   @IsNotEmpty()
   participantnbr: number;
+  @IsNumber()
+  @IsNotEmpty()
+  prix: number;
 
   @ApiProperty({
     description: 'The start date and time of the event',
