@@ -1,9 +1,10 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger, Inject, forwardRef } from '@nestjs/common';
 import { IEventService } from '../interfaces/event.interface';
 import { EventRepository } from '../repositories/event.repository';
 import { Event } from '../schemas/event.schema';
 import { CreateEventDto } from '../dtos/create-event.dto';
 import { UpdateEventDto } from '../dtos/update-event.dto';
+import { CreateParticipantDto } from '../../participants/dtos/create-participant.dto';
 import { 
   EventNotFoundException, 
   EventNameConflictException, 
@@ -24,9 +25,9 @@ export class EventService implements IEventService {
   constructor(
     private readonly eventRepository: EventRepository,
     private readonly exportService: ExportService,
-    private readonly participantService: ParticipantService,
+    @Inject(forwardRef(() => ParticipantService))
+    private readonly participantService: ParticipantService
   ) {
-    // Créer le dossier uploads s'il n'existe pas
     if (!fs.existsSync(this.UPLOAD_PATH)) {
       fs.mkdirSync(this.UPLOAD_PATH);
     }
@@ -155,5 +156,65 @@ export class EventService implements IEventService {
     this.logger.debug(`Found ${participants.length} participants for event ${eventId}`);
     
     return participants;
+  }
+
+  async updateTicketsCount(eventId: string): Promise<void> {
+    try {
+      this.logger.debug(`Updating tickets count for event ${eventId}`);
+      
+      const event = await this.findById(eventId);
+      if (!event) {
+        throw new EventNotFoundException(eventId);
+      }
+
+      // Obtenir le nombre de participants pour cet événement
+      const participants = await this.participantService.getParticipantsByEventId(eventId);
+      const participantCount = participants.length;
+
+      this.logger.debug(`Found ${participantCount} participants for event ${eventId}`);
+      this.logger.debug(`Original tickets: ${event.participantnbr}, Remaining: ${event.ticketrestant}`);
+
+      // Calculer le nouveau nombre de tickets restants
+      const newTicketCount = event.participantnbr - participantCount;
+
+      // Mettre à jour l'événement avec le nouveau nombre de tickets
+      const updateDto: UpdateEventDto = {
+        ticketrestant: newTicketCount
+      };
+
+      await this.eventRepository.updateEvent(eventId, updateDto);
+
+      this.logger.debug(`Updated tickets remaining to: ${newTicketCount}`);
+    } catch (error) {
+      this.logger.error(`Error updating tickets count: ${error.message}`);
+      throw error;
+    }
+  }
+
+  // Modifier la méthode qui gère l'ajout d'un participant
+  async addParticipant(eventId: string, participantDto: CreateParticipantDto): Promise<void> {
+    const event = await this.findById(eventId);
+    if (!event) {
+      throw new EventNotFoundException(eventId);
+    }
+
+    // Vérifier s'il reste des tickets
+    if (event.ticketrestant <= 0) {
+      throw new Error('No more tickets available for this event');
+    }
+
+    try {
+      // Ajouter le participant
+      await this.participantService.createParticipant({
+        ...participantDto,
+        eventId: eventId
+      });
+
+      // Mettre à jour le nombre de tickets restants
+      await this.updateTicketsCount(eventId);
+    } catch (error) {
+      this.logger.error(`Error adding participant to event: ${error.message}`);
+      throw error;
+    }
   }
 }

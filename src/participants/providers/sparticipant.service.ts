@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, Logger, Inject, forwardRef } from '@nestjs/common';
 import { ClientSession, Schema, Types } from 'mongoose';
 import { ParticipantRepository } from '../repositories/participant.repository';
 import { CreateParticipantDto } from '../dtos/create-participant.dto';
@@ -8,6 +8,7 @@ import {
   ParticipantNotFoundException,
   ParticipantAlreadyExistsException 
 } from '../exceptions/participant.exception';
+import { EventService } from '../../event/providers/event.service';
 
 @Injectable()
 export class ParticipantService {
@@ -15,6 +16,8 @@ export class ParticipantService {
 
   constructor(
     private readonly participantRepository: ParticipantRepository,
+    @Inject(forwardRef(() => EventService))
+    private readonly eventService: EventService
   ) {}
 
   private toObjectId(id: string): Schema.Types.ObjectId {
@@ -36,6 +39,8 @@ export class ParticipantService {
         createParticipantDto.email
       );
 
+      let result: Participant;
+
       if (existingParticipant) {
         this.logger.debug(`Found existing participant with email: ${createParticipantDto.email}`);
 
@@ -48,21 +53,28 @@ export class ParticipantService {
           throw new ConflictException('Participant already registered for this event');
         }
 
-        return this.participantRepository.addEvent(
+        result = await this.participantRepository.addEvent(
           existingParticipant._id.toString(),
           createParticipantDto.eventId
         );
+      } else {
+        if (createParticipantDto.eventId) {
+          result = await this.participantRepository.createWithEvent(
+            createParticipantDto,
+            createParticipantDto.eventId,
+            session
+          );
+        } else {
+          result = await this.participantRepository.create(createParticipantDto);
+        }
       }
 
+      // Mettre à jour le nombre de tickets si un eventId est fourni
       if (createParticipantDto.eventId) {
-        return this.participantRepository.createWithEvent(
-          createParticipantDto,
-          createParticipantDto.eventId,
-          session
-        );
+        await this.eventService.updateTicketsCount(createParticipantDto.eventId);
       }
 
-      return this.participantRepository.create(createParticipantDto);
+      return result;
     } catch (error) {
       this.logger.error(`Error creating participant: ${error.message}`);
       throw error;
@@ -150,27 +162,12 @@ export class ParticipantService {
     eventId: string
   ): Promise<Participant> {
     try {
-      const participantObjectId = this.toObjectId(participantId);
-      const eventObjectId = this.toObjectId(eventId);
-      
-      const participant = await this.participantRepository.findById(participantObjectId.toString());
-      
-      if (!participant) {
-        throw new ParticipantNotFoundException(participantId);
-      }
-
-      if (participant.events.some(e => e.toString() === eventObjectId.toString())) {
-        throw new ConflictException('Participant already registered for this event');
-      }
-
-      return await this.participantRepository.addEvent(
-        participantObjectId.toString(),
-        eventObjectId.toString()
-      );
+      const result = await this.participantRepository.addEvent(participantId, eventId);
+      // Mettre à jour le nombre de tickets restants
+      await this.eventService.updateTicketsCount(eventId);
+      return result;
     } catch (error) {
-      this.logger.error(
-        `Error adding event ${eventId} to participant ${participantId}: ${error.message}`
-      );
+      this.logger.error(`Error adding event ${eventId} to participant ${participantId}: ${error.message}`);
       throw error;
     }
   }
@@ -180,27 +177,12 @@ export class ParticipantService {
     eventId: string
   ): Promise<Participant> {
     try {
-      const participantObjectId = this.toObjectId(participantId);
-      const eventObjectId = this.toObjectId(eventId);
-      
-      const participant = await this.participantRepository.findById(participantObjectId.toString());
-      
-      if (!participant) {
-        throw new ParticipantNotFoundException(participantId);
-      }
-
-      if (!participant.events.some(e => e.toString() === eventObjectId.toString())) {
-        throw new NotFoundException('Participant not registered for this event');
-      }
-
-      return await this.participantRepository.removeEvent(
-        participantObjectId.toString(),
-        eventObjectId.toString()
-      );
+      const result = await this.participantRepository.removeEvent(participantId, eventId);
+      // Mettre à jour le nombre de tickets restants
+      await this.eventService.updateTicketsCount(eventId);
+      return result;
     } catch (error) {
-      this.logger.error(
-        `Error removing event ${eventId} from participant ${participantId}: ${error.message}`
-      );
+      this.logger.error(`Error removing event ${eventId} from participant ${participantId}: ${error.message}`);
       throw error;
     }
   }
