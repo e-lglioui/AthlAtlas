@@ -1,9 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger, Inject, forwardRef } from '@nestjs/common';
 import { IEventService } from '../interfaces/event.interface';
 import { EventRepository } from '../repositories/event.repository';
 import { Event } from '../schemas/event.schema';
 import { CreateEventDto } from '../dtos/create-event.dto';
 import { UpdateEventDto } from '../dtos/update-event.dto';
+import { CreateParticipantDto } from '../../participants/dtos/create-participant.dto';
 import { 
   EventNotFoundException, 
   EventNameConflictException, 
@@ -11,14 +12,26 @@ import {
 } from '../exceptions/event.exception';
 import { ExportService } from '../../participants/services/export.service';
 import { ParticipantService } from '../../participants/providers/sparticipant.service';
+import { Participant } from '../../participants/schemas/participant.schema'; 
+import { ExportFormat } from '../../common/enums/export-format.enum';
+import * as fs from 'fs';
+import * as path from 'path';
 
 @Injectable()
 export class EventService implements IEventService {
+  private readonly logger = new Logger(EventService.name);
+  private readonly UPLOAD_PATH = 'uploads';
+
   constructor(
     private readonly eventRepository: EventRepository,
     private readonly exportService: ExportService,
-    private readonly participantService: ParticipantService,
-  ) {}
+    @Inject(forwardRef(() => ParticipantService))
+    private readonly participantService: ParticipantService
+  ) {
+    if (!fs.existsSync(this.UPLOAD_PATH)) {
+      fs.mkdirSync(this.UPLOAD_PATH);
+    }
+  }
 
   async getAllEvent(): Promise<Event[]> {
     return this.eventRepository.getAllEvents();
@@ -88,16 +101,120 @@ export class EventService implements IEventService {
     return this.eventRepository.deleteEvent(eventId);
   }
 
-  async exportParticipants(eventId: string): Promise<string> {
+  async exportParticipants(eventId: string, format: ExportFormat): Promise<string> {
+    this.logger.debug(`Starting export for event ${eventId} in ${format} format`);
+
+    try {
+      // Vérifier si l'événement existe
+      const event = await this.findById(eventId);
+      if (!event) {
+        throw new EventNotFoundException(eventId);
+      }
+
+      // Récupérer les participants
+      const participants = await this.participantService.getParticipantsByEventId(eventId);
+      
+      if (!participants || participants.length === 0) {
+        this.logger.warn(`No participants found for event ${eventId}`);
+        throw new NotFoundException(`No participants found for event ${eventId}`);
+      }
+
+      // Exporter les participants dans le format demandé
+      const filePath = await this.exportService.exportParticipants(
+        participants,
+        eventId,
+        format
+      );
+
+      this.logger.debug(`Export completed successfully: ${filePath}`);
+      return filePath;
+
+    } catch (error) {
+      this.logger.error(`Export failed for event ${eventId}: ${error.message}`);
+      
+      // Propager l'erreur avec un message approprié
+      if (error instanceof EventNotFoundException) {
+        throw error;
+      }
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      
+      throw new Error(`Failed to export participants: ${error.message}`);
+    }
+  }
+  async getEventParticipants(eventId: string): Promise<Participant[]> {
+    this.logger.debug(`Fetching participants for event ${eventId}`);
+    
     const event = await this.findById(eventId);
     if (!event) {
+      this.logger.error(`Event with ID ${eventId} not found`);
       throw new NotFoundException(`Event with ID ${eventId} not found`);
     }
-
-    // Récupérer tous les participants de l'événement
-    const participants = await this.participantService.getParticipantsByEventId(eventId);
     
-    // Générer le fichier CSV
-    return this.exportService.exportParticipantsToCSV(participants, eventId);
+    const participants = await this.participantService.getParticipantsByEventId(eventId);
+    this.logger.debug(`Found ${participants.length} participants for event ${eventId}`);
+    
+    return participants;
+  }
+
+  async updateTicketsCount(eventId: string): Promise<void> {
+    try {
+      this.logger.debug(`Updating tickets count for event ${eventId}`);
+      
+      const event = await this.findById(eventId);
+      if (!event) {
+        throw new EventNotFoundException(eventId);
+      }
+
+      // Obtenir le nombre de participants pour cet événement
+      const participants = await this.participantService.getParticipantsByEventId(eventId);
+      const participantCount = participants.length;
+
+      this.logger.debug(`Found ${participantCount} participants for event ${eventId}`);
+      this.logger.debug(`Original tickets: ${event.participantnbr}, Remaining: ${event.ticketrestant}`);
+
+      // Calculer le nouveau nombre de tickets restants
+      const newTicketCount = event.participantnbr - participantCount;
+
+      // Mettre à jour l'événement avec le nouveau nombre de tickets
+      const updateDto: UpdateEventDto = {
+        ticketrestant: newTicketCount
+      };
+
+      await this.eventRepository.updateEvent(eventId, updateDto);
+
+      this.logger.debug(`Updated tickets remaining to: ${newTicketCount}`);
+    } catch (error) {
+      this.logger.error(`Error updating tickets count: ${error.message}`);
+      throw error;
+    }
+  }
+
+  // Modifier la méthode qui gère l'ajout d'un participant
+  async addParticipant(eventId: string, participantDto: CreateParticipantDto): Promise<void> {
+    const event = await this.findById(eventId);
+    if (!event) {
+      throw new EventNotFoundException(eventId);
+    }
+
+    // Vérifier s'il reste des tickets
+    if (event.ticketrestant <= 0) {
+      throw new Error('No more tickets available for this event');
+    }
+
+    try {
+      // Ajouter le participant
+      await this.participantService.createParticipant({
+        ...participantDto,
+        eventId: eventId
+      });
+
+      // Mettre à jour le nombre de tickets restants
+      await this.updateTicketsCount(eventId);
+    } catch (error) {
+      this.logger.error(`Error adding participant to event: ${error.message}`);
+      throw error;
+    }
   }
 }

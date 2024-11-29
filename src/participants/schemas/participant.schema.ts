@@ -27,10 +27,7 @@ export class Participant extends Document {
   @Prop()
   gender: string;
 
-  @Prop({
-    type: [{ type: MongooseSchema.Types.ObjectId, ref: 'Event' }],
-    default: [],
-  })
+  @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'Event' }] })
   events: MongooseSchema.Types.ObjectId[];
 
   createdAt: Date;

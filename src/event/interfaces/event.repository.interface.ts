@@ -7,6 +7,6 @@ export interface IEventRepository {
   findById(id: string): Promise<Event>; 
   findByName(name: string): Promise<Event>; 
   createEvent(createEventDto: CreateEventDto): Promise<Event>; 
-  updateEvent(eventId: string, updateEventDto: UpdateEventDto): Promise<Event>; 
-  deleteEvent(eventId: string): Promise<Event>; 
+  updateEvent(id: string, updateEventDto: UpdateEventDto): Promise<Event>; 
+  deleteEvent(id: string): Promise<Event>; 
 }

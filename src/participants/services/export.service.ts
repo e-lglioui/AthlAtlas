@@ -1,86 +1,111 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import { createObjectCsvWriter } from 'csv-writer';
-import { Participant } from '../schemas/participant.schema';
-import * as path from 'path';
+import { Injectable, Logger } from '@nestjs/common';
+import { ExportFormat } from '../../common/enums/export-format.enum';
+import * as ExcelJS from 'exceljs';
+import * as PDFDocument from 'pdfkit';
 import * as fs from 'fs';
-import { UPLOAD_PATH } from '../../common/constants/paths.constant';
+import * as path from 'path';
+import { Participant } from '../schemas/participant.schema';
 
 @Injectable()
 export class ExportService {
+  private readonly UPLOAD_PATH = 'uploads';
+  private readonly logger = new Logger(ExportService.name);
+
   constructor() {
-    if (!fs.existsSync(UPLOAD_PATH)) {
-      fs.mkdirSync(UPLOAD_PATH, { recursive: true });
+    // Créer le dossier uploads s'il n'existe pas
+    if (!fs.existsSync(this.UPLOAD_PATH)) {
+      fs.mkdirSync(this.UPLOAD_PATH);
     }
   }
 
-  async exportParticipantsToCSV(
-    participants: Participant[],
+  async exportParticipants(
+    participants: Participant[], 
     eventId: string,
+    format: ExportFormat
   ): Promise<string> {
-    if (!participants || participants.length === 0) {
-      throw new InternalServerErrorException('Aucun participant à exporter');
-    }
-
+    this.logger.debug(`Starting export for event ${eventId} in ${format} format`);
+    
     try {
-      const fileName = `event-${eventId}-participants-${Date.now()}.csv`;
-      const filePath = path.join(UPLOAD_PATH, fileName);
-
-      const csvWriter = createObjectCsvWriter({
-        path: filePath,
-        header: [
-          { id: 'firstName', title: 'Prénom' },
-          { id: 'lastName', title: 'Nom' },
-          { id: 'email', title: 'Email' },
-          { id: 'phone', title: 'Téléphone' },
-          { id: 'organization', title: 'Organisation' },
-          { id: 'age', title: 'Âge' },
-          { id: 'gender', title: 'Genre' },
-          { id: 'registrationDate', title: 'Date d\'inscription' },
-        ],
-        encoding: 'utf8',
-      });
-
-      const records = participants.map((participant) => ({
-        firstName: participant.firstName || 'N/A',
-        lastName: participant.lastName || 'N/A',
-        email: participant.email || 'N/A',
-        phone: participant.phone || 'N/A',
-        organization: participant.organization || 'N/A',
-        age: participant.age?.toString() || 'N/A',
-        gender: participant.gender || 'N/A',
-        registrationDate: participant.createdAt 
-          ? new Date(participant.createdAt).toLocaleDateString('fr-FR')
-          : 'N/A',
-      }));
-
-      await csvWriter.writeRecords(records);
-
-      if (!fs.existsSync(filePath)) {
-        throw new InternalServerErrorException('Échec de la création du fichier CSV');
+      let filePath: string;
+      switch (format) {
+        case ExportFormat.CSV:
+          filePath = await this.exportToCSV(participants, eventId);
+          break;
+        case ExportFormat.PDF:
+          filePath = await this.exportToPDF(participants, eventId);
+          break;
+        case ExportFormat.EXCEL:
+          filePath = await this.exportToExcel(participants, eventId);
+          break;
+        default:
+          throw new Error('Format non supporté');
       }
 
+      this.logger.debug(`Export completed: ${filePath}`);
       return filePath;
     } catch (error) {
-      const tempFile = path.join(UPLOAD_PATH, `event-${eventId}-participants-*.csv`);
-      try {
-        fs.unlinkSync(tempFile);
-      } catch (e) {
-        // Ignorer les erreurs de suppression
-      }
-
-      throw new InternalServerErrorException(
-        `Erreur lors de la génération du fichier CSV: ${error.message}`,
-      );
+      this.logger.error(`Export failed: ${error.message}`);
+      throw error;
     }
   }
 
-  async cleanupTempFiles(filePath: string): Promise<void> {
-    try {
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-    } catch (error) {
-      console.error(`Erreur lors de la suppression du fichier temporaire ${filePath}:`, error);
-    }
+  private async exportToCSV(participants: Participant[], eventId: string): Promise<string> {
+    const filePath = path.join(this.UPLOAD_PATH, `event-${eventId}-participants.csv`);
+    const headers = 'Prénom,Nom,Email,Téléphone\n';
+    
+    const csvContent = participants.map(p => 
+      `${p.firstName},${p.lastName},${p.email},${p.phone}`
+    ).join('\n');
+
+    fs.writeFileSync(filePath, headers + csvContent);
+    return filePath;
+  }
+
+  private async exportToPDF(participants: Participant[], eventId: string): Promise<string> {
+    const filePath = path.join(this.UPLOAD_PATH, `event-${eventId}-participants.pdf`);
+    const doc = new PDFDocument();
+    const stream = fs.createWriteStream(filePath);
+
+    doc.pipe(stream);
+    doc.fontSize(16).text('Liste des participants', { align: 'center' });
+    doc.moveDown();
+
+    participants.forEach(p => {
+      doc.fontSize(12).text(`${p.firstName} ${p.lastName}`);
+      doc.fontSize(10).text(`Email: ${p.email}`);
+      doc.fontSize(10).text(`Téléphone: ${p.phone}`);
+      doc.moveDown();
+    });
+
+    doc.end();
+
+    return new Promise((resolve) => {
+      stream.on('finish', () => resolve(filePath));
+    });
+  }
+
+  private async exportToExcel(participants: Participant[], eventId: string): Promise<string> {
+    const filePath = path.join(this.UPLOAD_PATH, `event-${eventId}-participants.xlsx`);
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Participants');
+
+    worksheet.columns = [
+      { header: 'Prénom', key: 'firstName', width: 20 },
+      { header: 'Nom', key: 'lastName', width: 20 },
+      { header: 'Email', key: 'email', width: 30 },
+      { header: 'Téléphone', key: 'phone', width: 15 }
+    ];
+
+    participants.forEach(p => {
+      worksheet.addRow({
+        firstName: p.firstName,
+        lastName: p.lastName,
+        email: p.email,
+        phone: p.phone
+      });
+    });
+
+    await workbook.xlsx.writeFile(filePath);
+    return filePath;
   }
 }

@@ -9,6 +9,7 @@ import {UsersModule} from './users/users.module'
 import { ErrorHandlerMiddleware } from './common/middlewares/error-handler.middleware';
 import {EventModule}from './event/event.module'
 import {ParticipantModule} from './participants/participant.module'
+import { ExportModule } from './participants/export.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -21,6 +22,7 @@ import {ParticipantModule} from './participants/participant.module'
     UsersModule,
     EventModule,
     ParticipantModule,
+    ExportModule,
   ],
 })
 export class AppModule implements NestModule {
