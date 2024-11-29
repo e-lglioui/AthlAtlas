@@ -11,7 +11,7 @@ import {
     UseGuards,
     Res
   } from '@nestjs/common';
-  import { ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
+  import { ApiOperation, ApiResponse, ApiTags, ApiParam, ApiQuery } from '@nestjs/swagger';
   import { EventService } from '../providers/event.service';
   import { CreateEventDto } from '../dtos/create-event.dto';
   import { UpdateEventDto } from '../dtos/update-event.dto';
@@ -21,6 +21,7 @@ import {
   import { Response } from 'express';
   import * as fs from 'fs';
   import { Participant } from '../../participants/schemas/participant.schema';
+  import { ExportFormat } from '../../common/enums/export-format.enum';
 
   @ApiTags('events')
   @Controller('events')
@@ -99,31 +100,18 @@ import {
       return this.eventService.deleteEvent(id);
     }
   
-    @Get(':id/registrations/export')
-    async exportParticipants(
-      @Param('id') id: string,
-      @Res() res: Response,
-    ) {
-      try {
-        const filePath = await this.eventService.exportParticipants(id);
-        
-        res.setHeader('Content-Type', 'text/csv');
-        res.setHeader(
-          'Content-Disposition',
-          `attachment; filename=event-${id}-participants.csv`,
-        );
+    @Get(':id/registrations/export?forma')
+    @UseGuards(JwtAuthGuard)
+    @ApiOperation({ summary: 'Export participants list' })
+    @ApiParam({ name: 'id', description: 'Event ID' })
+    @ApiQuery({ 
+      name: 'format', 
+      enum: ExportFormat, 
+      description: 'Export format (csv, pdf, xlsx)',
+      required: false,
+      default: ExportFormat.CSV
+    })
 
-        const fileStream = fs.createReadStream(filePath);
-        fileStream.pipe(res);
-
-        // Supprimer le fichier après l'envoi
-        fileStream.on('end', () => {
-          fs.unlinkSync(filePath);
-        });
-      } catch (error) {
-        res.status(404).json({ message: error.message });
-      }
-    }
   @Get(':id/participants')
  @UseGuards(JwtAuthGuard)
  @ApiOperation({ summary: 'Get all participants for an event' })
@@ -142,5 +130,87 @@ import {
  ): Promise<Participant[]> {
    return this.eventService.getEventParticipant(id);
  }
+
+ @Get(':id/participants/export')
+ @UseGuards(JwtAuthGuard)
+ @ApiOperation({ summary: 'Export participants list' })
+ @ApiParam({ name: 'id', description: 'Event ID' })
+ @ApiQuery({ 
+   name: 'format', 
+   enum: ['pdf', 'csv', 'excel'], 
+   description: 'Export format (pdf, csv, excel)',
+   required: false,
+   default: 'pdf'
+ })
+ async exportParticipants(
+   @Param('id') id: string,
+   @Query('format') format: string = 'pdf',
+   @Res() res: Response,
+ ) {
+   try {
+     // Convertir le format en ExportFormat
+     let exportFormat: ExportFormat;
+     switch (format) {
+       case 'pdf':
+         exportFormat = ExportFormat.PDF;
+         break;
+       case 'csv':
+         exportFormat = ExportFormat.CSV;
+         break;
+       case 'excel':
+         exportFormat = ExportFormat.EXCEL;
+         break;
+       default:
+         exportFormat = ExportFormat.PDF;
+     }
+
+     const filePath = await this.eventService.exportParticipants(id, exportFormat);
+
+     const mimeTypes = {
+       'pdf': 'application/pdf',
+       'csv': 'text/csv',
+       'excel': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+     };
+
+     // Configuration des headers pour FileSaver.js
+     res.setHeader('Content-Type', mimeTypes[format]);
+     res.setHeader(
+       'Content-Disposition', 
+       `attachment; filename=event-${id}-participants.${format === 'excel' ? 'xlsx' : format}`
+     );
+     res.setHeader('Access-Control-Allow-Origin', '*');
+     res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
+
+     // Envoyer le fichier
+     const fileStream = fs.createReadStream(filePath);
+     fileStream.pipe(res);
+
+     // Nettoyer le fichier après l'envoi
+     fileStream.on('end', () => {
+       try {
+         fs.unlinkSync(filePath);
+       } catch (error) {
+         console.error('Error deleting file:', error);
+       }
+     });
+
+     // Gérer les erreurs de stream
+     fileStream.on('error', (error) => {
+       console.error('File stream error:', error);
+       if (!res.headersSent) {
+         res.status(500).json({ message: 'Error reading export file' });
+       }
+     });
+
+   } catch (error) {
+     console.error('Export error:', error);
+     if (!res.headersSent) {
+       res.status(error.status || 500).json({
+         message: error.message || 'Failed to export participants'
+       });
+     }
+   }
+ }
+
   }
   
