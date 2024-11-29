@@ -100,117 +100,104 @@ import {
       return this.eventService.deleteEvent(id);
     }
   
-    @Get(':id/registrations/export?forma')
+    @Get(':id/participants/export')
     @UseGuards(JwtAuthGuard)
     @ApiOperation({ summary: 'Export participants list' })
     @ApiParam({ name: 'id', description: 'Event ID' })
     @ApiQuery({ 
       name: 'format', 
-      enum: ExportFormat, 
-      description: 'Export format (csv, pdf, xlsx)',
+      enum: ['pdf', 'csv', 'excel'], 
+      description: 'Export format (pdf, csv, excel)',
       required: false,
-      default: ExportFormat.CSV
+      default: 'pdf'
     })
+    async exportParticipants(
+      @Param('id') id: string,
+      @Query('format') format: string = 'pdf',
+      @Res() res: Response,
+    ) {
+      try {
+        // Convertir le format en ExportFormat
+        let exportFormat: ExportFormat;
+        switch (format) {
+          case 'pdf':
+            exportFormat = ExportFormat.PDF;
+            break;
+          case 'csv':
+            exportFormat = ExportFormat.CSV;
+            break;
+          case 'excel':
+            exportFormat = ExportFormat.EXCEL;
+            break;
+          default:
+            exportFormat = ExportFormat.PDF;
+        }
 
-  @Get(':id/participants')
- @UseGuards(JwtAuthGuard)
- @ApiOperation({ summary: 'Get all participants for an event' })
- @ApiParam({ name: 'id', description: 'Event ID' })
- @ApiResponse({ 
-   status: 200, 
-   description: 'Return all participants for the specified event.',
-   type: [Participant]
- })
- @ApiResponse({ 
-   status: 404, 
-   description: 'Event not found.'
- })
- async getEventParticipant(
-   @Param('id') id: string
- ): Promise<Participant[]> {
-   return this.eventService.getEventParticipant(id);
- }
+        const filePath = await this.eventService.exportParticipants(id, exportFormat);
 
- @Get(':id/participants/export')
- @UseGuards(JwtAuthGuard)
- @ApiOperation({ summary: 'Export participants list' })
- @ApiParam({ name: 'id', description: 'Event ID' })
- @ApiQuery({ 
-   name: 'format', 
-   enum: ['pdf', 'csv', 'excel'], 
-   description: 'Export format (pdf, csv, excel)',
-   required: false,
-   default: 'pdf'
- })
- async exportParticipants(
-   @Param('id') id: string,
-   @Query('format') format: string = 'pdf',
-   @Res() res: Response,
- ) {
-   try {
-     // Convertir le format en ExportFormat
-     let exportFormat: ExportFormat;
-     switch (format) {
-       case 'pdf':
-         exportFormat = ExportFormat.PDF;
-         break;
-       case 'csv':
-         exportFormat = ExportFormat.CSV;
-         break;
-       case 'excel':
-         exportFormat = ExportFormat.EXCEL;
-         break;
-       default:
-         exportFormat = ExportFormat.PDF;
-     }
+        const mimeTypes = {
+          'pdf': 'application/pdf',
+          'csv': 'text/csv',
+          'excel': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        };
 
-     const filePath = await this.eventService.exportParticipants(id, exportFormat);
+        // Configuration des headers pour FileSaver.js
+        res.setHeader('Content-Type', mimeTypes[format]);
+        res.setHeader(
+          'Content-Disposition', 
+          `attachment; filename=event-${id}-participants.${format === 'excel' ? 'xlsx' : format}`
+        );
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
 
-     const mimeTypes = {
-       'pdf': 'application/pdf',
-       'csv': 'text/csv',
-       'excel': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-     };
+        // Envoyer le fichier
+        const fileStream = fs.createReadStream(filePath);
+        fileStream.pipe(res);
 
-     // Configuration des headers pour FileSaver.js
-     res.setHeader('Content-Type', mimeTypes[format]);
-     res.setHeader(
-       'Content-Disposition', 
-       `attachment; filename=event-${id}-participants.${format === 'excel' ? 'xlsx' : format}`
-     );
-     res.setHeader('Access-Control-Allow-Origin', '*');
-     res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
+        // Nettoyer le fichier après l'envoi
+        fileStream.on('end', () => {
+          try {
+            fs.unlinkSync(filePath);
+          } catch (error) {
+            console.error('Error deleting file:', error);
+          }
+        });
 
-     // Envoyer le fichier
-     const fileStream = fs.createReadStream(filePath);
-     fileStream.pipe(res);
+        // Gérer les erreurs de stream
+        fileStream.on('error', (error) => {
+          console.error('File stream error:', error);
+          if (!res.headersSent) {
+            res.status(500).json({ message: 'Error reading export file' });
+          }
+        });
 
-     // Nettoyer le fichier après l'envoi
-     fileStream.on('end', () => {
-       try {
-         fs.unlinkSync(filePath);
-       } catch (error) {
-         console.error('Error deleting file:', error);
-       }
-     });
-
-     // Gérer les erreurs de stream
-     fileStream.on('error', (error) => {
-       console.error('File stream error:', error);
-       if (!res.headersSent) {
-         res.status(500).json({ message: 'Error reading export file' });
-       }
-     });
-
-   } catch (error) {
-     console.error('Export error:', error);
-     if (!res.headersSent) {
-       res.status(error.status || 500).json({
-         message: error.message || 'Failed to export participants'
-       });
-     }
-   }
- }
-
+      } catch (error) {
+        console.error('Export error:', error);
+        if (!res.headersSent) {
+          res.status(error.status || 500).json({
+            message: error.message || 'Failed to export participants'
+          });
+        }
+      }
+    }
+  
+    @Get(':id/participants')
+    @UseGuards(JwtAuthGuard)
+    @ApiOperation({ summary: 'Get all participants for an event' })
+    @ApiParam({ name: 'id', description: 'Event ID' })
+    @ApiResponse({ 
+      status: 200, 
+      description: 'Return all participants for the specified event.',
+      type: [Participant]
+    })
+    @ApiResponse({ 
+      status: 404, 
+      description: 'Event not found.'
+    })
+    async getEventParticipants(
+      @Param('id') id: string
+    ): Promise<Participant[]> {
+      return this.eventService.getEventParticipants(id);
+    }
   }
   

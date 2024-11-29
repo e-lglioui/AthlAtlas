@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
-import { ClientSession, Schema } from 'mongoose';
+import { ClientSession, Schema, Types } from 'mongoose';
 import { ParticipantRepository } from '../repositories/participant.repository';
 import { CreateParticipantDto } from '../dtos/create-participant.dto';
 import { UpdateParticipantDto } from '../dtos/update-participant.dto';
@@ -94,8 +94,11 @@ export class ParticipantService {
 
   async getParticipantsByEventId(eventId: string): Promise<Participant[]> {
     try {
-      const objectId = this.toObjectId(eventId);
+      this.logger.debug(`Fetching participants for event ${eventId}`);
+      
+      const objectId = new Types.ObjectId(eventId);
       return await this.participantRepository.findByEventId(objectId.toString());
+      
     } catch (error) {
       this.logger.error(`Error fetching participants for event ${eventId}: ${error.message}`);
       throw error;

@@ -12,5 +12,5 @@ createEvent(createEventDto: CreateEventDto): Promise<Event>;
 updateEvent(eventId: string, updateEventDto: UpdateEventDto): Promise<Event>;
 deleteEvent(eventId: string): Promise<Event>;
 exportParticipants(eventId: string, format: ExportFormat): Promise<string>;
-getEventParticipant(eventId: string): Promise<Participant[]>;
+getEventParticipants(eventId: string): Promise<Participant[]>;
 }

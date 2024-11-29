@@ -142,11 +142,18 @@ export class EventService implements IEventService {
       throw new Error(`Failed to export participants: ${error.message}`);
     }
   }
-  async getEventParticipant(eventId: string): Promise<Participant[]> {  
+  async getEventParticipants(eventId: string): Promise<Participant[]> {
+    this.logger.debug(`Fetching participants for event ${eventId}`);
+    
     const event = await this.findById(eventId);
     if (!event) {
+      this.logger.error(`Event with ID ${eventId} not found`);
       throw new NotFoundException(`Event with ID ${eventId} not found`);
     }
-     return this.participantService.getParticipantsByEventId(eventId);
+    
+    const participants = await this.participantService.getParticipantsByEventId(eventId);
+    this.logger.debug(`Found ${participants.length} participants for event ${eventId}`);
+    
+    return participants;
   }
 }
