@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Logger, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger, Inject, forwardRef, BadRequestException } from '@nestjs/common';
 import { IEventService } from '../interfaces/event.interface';
 import { EventRepository } from '../repositories/event.repository';
 import { Event } from '../schemas/event.schema';
@@ -16,6 +16,8 @@ import { Participant } from '../../participants/schemas/participant.schema';
 import { ExportFormat } from '../../common/enums/export-format.enum';
 import * as fs from 'fs';
 import * as path from 'path';
+import { EventStatsDto } from '../dtos/event-stats.dto';
+import { Types } from 'mongoose';
 
 @Injectable()
 export class EventService implements IEventService {
@@ -214,6 +216,91 @@ export class EventService implements IEventService {
       await this.updateTicketsCount(eventId);
     } catch (error) {
       this.logger.error(`Error adding participant to event: ${error.message}`);
+      throw error;
+    }
+  }
+
+  async getEventStatistics(): Promise<EventStatsDto> {
+    try {
+      const now = new Date();
+      const allEvents = await this.eventRepository.getAllEvents();
+      
+      // Calculer les statistiques de base
+      const activeEvents = allEvents.filter(event => 
+        event.startDate <= now && event.endDate >= now
+      );
+      
+      const completedEvents = allEvents.filter(event => 
+        event.endDate < now
+      );
+      
+      const upcomingEvents = allEvents.filter(event => 
+        event.startDate > now
+      );
+
+      // Calculer les statistiques de tickets
+      let totalTickets = 0;
+      let soldTickets = 0;
+      const participationTrends = [];
+
+      for (const event of allEvents) {
+        totalTickets += event.participantnbr;
+        const participants = await this.participantService.getParticipantsByEventId(event._id.toString());
+        const eventSoldTickets = participants.length;
+        soldTickets += eventSoldTickets;
+
+        participationTrends.push({
+          eventId: event._id.toString(),
+          eventName: event.name,
+          totalTickets: event.participantnbr,
+          soldTickets: eventSoldTickets,
+          remainingTickets: event.ticketrestant
+        });
+      }
+
+      // Grouper les événements par mois
+      const eventsByMonth = allEvents.reduce((acc, event) => {
+        const month = event.startDate.toLocaleString('default', { month: 'long' });
+        acc[month] = (acc[month] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      return {
+        totalEvents: allEvents.length,
+        activeEvents: activeEvents.length,
+        completedEvents: completedEvents.length,
+        upcomingEvents: upcomingEvents.length,
+        totalParticipants: soldTickets,
+        averageParticipantsPerEvent: allEvents.length ? soldTickets / allEvents.length : 0,
+        ticketUtilization: {
+          totalTickets,
+          soldTickets,
+          utilizationRate: totalTickets ? (soldTickets / totalTickets) * 100 : 0
+        },
+        eventsByMonth,
+        participationTrends
+      };
+    } catch (error) {
+      this.logger.error(`Error getting event statistics: ${error.message}`);
+      throw error;
+    }
+  }
+
+  async getEventsByUserId(userId: string): Promise<Event[]> {
+    try {
+      this.logger.debug(`Fetching events for user ${userId}`);
+      
+      if (!Types.ObjectId.isValid(userId)) {
+        throw new BadRequestException('Invalid user ID format');
+      }
+
+      const events = await this.eventRepository.findByUserId(userId);
+      
+      this.logger.debug(`Found ${events.length} events for user ${userId}`);
+      
+      return events;
+    } catch (error) {
+      this.logger.error(`Error fetching events for user ${userId}: ${error.message}`);
       throw error;
     }
   }

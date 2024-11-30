@@ -9,7 +9,8 @@ import {
     Query, 
     NotFoundException ,
     UseGuards,
-    Res
+    Res,
+    HttpStatus
   } from '@nestjs/common';
   import { ApiOperation, ApiResponse, ApiTags, ApiParam, ApiQuery } from '@nestjs/swagger';
   import { EventService } from '../providers/event.service';
@@ -22,6 +23,7 @@ import {
   import * as fs from 'fs';
   import { Participant } from '../../participants/schemas/participant.schema';
   import { ExportFormat } from '../../common/enums/export-format.enum';
+  import { EventStatsDto } from '../dtos/event-stats.dto';
 
   @ApiTags('events')
   @Controller('events')
@@ -198,6 +200,37 @@ import {
       @Param('id') id: string
     ): Promise<Participant[]> {
       return this.eventService.getEventParticipants(id);
+    }
+  
+    @Get('stats/overview')
+    @UseGuards(JwtAuthGuard)
+    @ApiOperation({ summary: 'Get event statistics overview' })
+    @ApiResponse({
+      status: HttpStatus.OK,
+      description: 'Event statistics overview',
+      type: EventStatsDto
+    })
+    async getEventStatistics(): Promise<EventStatsDto> {
+      return this.eventService.getEventStatistics();
+    }
+  
+    @Get('user/:userId')
+    @UseGuards(JwtAuthGuard)
+    @ApiOperation({ summary: 'Get events by user ID' })
+    @ApiParam({ name: 'userId', description: 'User ID' })
+    @ApiResponse({ 
+      status: HttpStatus.OK, 
+      description: 'Return all events for the specified user',
+      type: [Event] 
+    })
+    @ApiResponse({ 
+      status: HttpStatus.NOT_FOUND, 
+      description: 'User not found or has no events' 
+    })
+    async getEventsByUserId(
+      @Param('userId') userId: string
+    ): Promise<Event[]> {
+      return this.eventService.getEventsByUserId(userId);
     }
   }
   

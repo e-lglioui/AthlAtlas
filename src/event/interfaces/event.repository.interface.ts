@@ -9,4 +9,5 @@ export interface IEventRepository {
   createEvent(createEventDto: CreateEventDto): Promise<Event>; 
   updateEvent(id: string, updateEventDto: UpdateEventDto): Promise<Event>; 
   deleteEvent(id: string): Promise<Event>; 
+  findByUserId(userId: string): Promise<Event[]>;
 }
