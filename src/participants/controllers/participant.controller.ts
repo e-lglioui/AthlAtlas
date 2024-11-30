@@ -11,25 +11,31 @@ import {
   HttpStatus,
   UseGuards,
   BadRequestException,
+  NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { 
   ApiTags, 
   ApiOperation, 
   ApiResponse, 
   ApiParam, 
-  ApiBearerAuth 
+  ApiBearerAuth,
+  ApiQuery
 } from '@nestjs/swagger';
 import { ParticipantService } from '../providers/sparticipant.service';
 import { CreateParticipantDto } from '../dtos/create-participant.dto';
 import { UpdateParticipantDto } from '../dtos/update-participant.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { Participant } from '../schemas/participant.schema';
+import { Types } from 'mongoose';
 
 @ApiTags('Participants')
 @Controller('participants')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class ParticipantController {
+  private readonly logger = new Logger(ParticipantController.name);
+
   constructor(private readonly participantService: ParticipantService) {}
 
   @Post()
@@ -72,6 +78,9 @@ export class ParticipantController {
     type: Participant 
   })
   async getParticipantById(@Param('id') id: string): Promise<Participant> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid participant ID');
+    }
     return this.participantService.getParticipantById(id);
   }
 
@@ -92,6 +101,7 @@ export class ParticipantController {
 
   @Put(':id')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Update participant' })
   @ApiParam({ name: 'id', description: 'Participant ID' })
   @ApiResponse({ 
@@ -103,7 +113,29 @@ export class ParticipantController {
     @Param('id') id: string,
     @Body() updateParticipantDto: UpdateParticipantDto
   ): Promise<Participant> {
-    return this.participantService.updateParticipant(id, updateParticipantDto);
+    try {
+      if (!id) {
+        throw new BadRequestException('Participant ID is required');
+      }
+      
+      if (!Types.ObjectId.isValid(id)) {
+        throw new BadRequestException('Invalid participant ID format');
+      }
+
+      const updatedParticipant = await this.participantService.updateParticipant(
+        id, 
+        updateParticipantDto
+      );
+
+      if (!updatedParticipant) {
+        throw new NotFoundException(`Participant with ID ${id} not found`);
+      }
+
+      return updatedParticipant;
+    } catch (error) {
+      this.logger.error(`Error updating participant ${id}: ${error.message}`);
+      throw error;
+    }
   }
 
   @Delete(':id')
@@ -163,5 +195,24 @@ export class ParticipantController {
   })
   async checkEmailExists(@Query('email') email: string): Promise<boolean> {
     return this.participantService.checkEmailExists(email);
+  }
+
+  @Get('search/name')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Search participants by name' })
+  @ApiQuery({ name: 'q', description: 'Search query' })
+  @ApiResponse({ 
+    status: HttpStatus.OK, 
+    description: 'List of participants matching the search criteria',
+    type: [Participant] 
+  })
+  async searchParticipantsByName(
+    @Query('q') query: string
+  ): Promise<Participant[]> {
+    if (!query || query.trim().length === 0) {
+      throw new BadRequestException('Search query is required');
+    }
+    return this.participantService.searchByName(query);
   }
 }

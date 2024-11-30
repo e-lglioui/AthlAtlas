@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, ClientSession } from 'mongoose';
+import { Model, ClientSession, Types } from 'mongoose';
 import { Participant } from '../schemas/participant.schema';
 import { CreateParticipantDto } from '../dtos/create-participant.dto';
 import { UpdateParticipantDto } from '../dtos/update-participant.dto';
@@ -47,6 +47,10 @@ export class ParticipantRepository implements IParticipantRepository {
   }
 
   async findById(id: string): Promise<Participant> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new ParticipantNotFoundException(id);
+    }
+
     const participant = await this.participantModel
       .findById(id)
       .populate('events')
@@ -69,18 +73,34 @@ export class ParticipantRepository implements IParticipantRepository {
     id: string,
     updateParticipantDto: UpdateParticipantDto,
   ): Promise<Participant> {
-    const participant = await this.participantModel
-      .findByIdAndUpdate(id, updateParticipantDto, { 
-        new: true,
-        runValidators: true,
-      })
-      .populate('events')
-      .exec();
-      
-    if (!participant) {
-      throw new ParticipantNotFoundException(id);
+    try {
+      if (!Types.ObjectId.isValid(id)) {
+        throw new ParticipantNotFoundException(id);
+      }
+
+      const participant = await this.participantModel
+        .findByIdAndUpdate(
+          id,
+          { $set: updateParticipantDto },
+          { 
+            new: true,
+            runValidators: true,
+          }
+        )
+        .populate('events')
+        .exec();
+        
+      if (!participant) {
+        throw new ParticipantNotFoundException(id);
+      }
+
+      return participant;
+    } catch (error) {
+      if (error.name === 'ValidationError') {
+        throw new BadRequestException(error.message);
+      }
+      throw error;
     }
-    return participant;
   }
 
   async delete(id: string): Promise<Participant> {
@@ -169,6 +189,20 @@ export class ParticipantRepository implements IParticipantRepository {
   async findByEventIds(eventIds: string[]): Promise<Participant[]> {
     return this.participantModel
       .find({ events: { $in: eventIds } })
+      .populate('events')
+      .sort({ createdAt: -1 })
+      .exec();
+  }
+
+  async searchByName(name: string): Promise<Participant[]> {
+    const searchRegex = new RegExp(name, 'i'); // 'i' pour une recherche insensible à la casse
+    return this.participantModel
+      .find({
+        $or: [
+          { firstName: { $regex: searchRegex } },
+          { lastName: { $regex: searchRegex } }
+        ]
+      })
       .populate('events')
       .sort({ createdAt: -1 })
       .exec();
