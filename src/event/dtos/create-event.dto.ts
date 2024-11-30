@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsNumber, IsDate, IsMongoId } from 'class-validator';
+import { IsNotEmpty, IsString, IsNumber, IsDate, IsMongoId, IsOptional, IsUrl } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateEventDto {
@@ -60,4 +60,15 @@ export class CreateEventDto {
   @IsDate()
   @IsNotEmpty()
   endDate: Date;
+
+  @ApiProperty({
+    description: 'URL de l\'image de l\'événement',
+    example: 'https://example.com/images/event.jpg',
+    type: String,
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  @IsUrl({}, { message: 'L\'URL de l\'image doit être valide' })
+  image?: string;
 }
