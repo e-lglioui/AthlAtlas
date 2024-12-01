@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { EventService } from './event.service';
 import { EventRepository } from '../repositories/event.repository';
 import { ParticipantService } from '../../participants/providers/sparticipant.service';
+import { ExportService } from '../../participants/services/export.service';
 import { Event } from '../schemas/event.schema';
 import { Participant } from '../../participants/schemas/participant.schema';
 import { CreateEventDto } from '../dtos/create-event.dto';
@@ -18,6 +19,7 @@ describe('EventService', () => {
   let service: EventService;
   let repository: jest.Mocked<EventRepository>;
   let participantService: jest.Mocked<ParticipantService>;
+  let exportService: jest.Mocked<ExportService>;
 
   const mockEvent = {
     _id: new Types.ObjectId(),
@@ -119,12 +121,19 @@ describe('EventService', () => {
             deleteParticipantsByEventId: jest.fn(),
           },
         },
+        {
+          provide: ExportService,
+          useValue: {
+            exportParticipants: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
     service = module.get<EventService>(EventService);
     repository = module.get(EventRepository);
     participantService = module.get(ParticipantService);
+    exportService = module.get(ExportService);
   });
 
   describe('getAllEvent', () => {
