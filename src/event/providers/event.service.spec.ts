@@ -18,7 +18,6 @@ import { Types } from 'mongoose';
 describe('EventService', () => {
   let service: EventService;
   let repository: jest.Mocked<EventRepository>;
-  let exportService: jest.Mocked<ExportService>;
   let participantService: jest.Mocked<ParticipantService>;
 
   const mockEvent = {
@@ -115,12 +114,6 @@ describe('EventService', () => {
           },
         },
         {
-          provide: ExportService,
-          useValue: {
-            exportParticipants: jest.fn(),
-          },
-        },
-        {
           provide: ParticipantService,
           useValue: {
             getParticipantsByEventId: jest.fn(),
@@ -132,7 +125,6 @@ describe('EventService', () => {
 
     service = module.get<EventService>(EventService);
     repository = module.get(EventRepository);
-  
     participantService = module.get(ParticipantService);
   });
 
