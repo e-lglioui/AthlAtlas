@@ -19,7 +19,6 @@ describe('EventService', () => {
   let service: EventService;
   let repository: jest.Mocked<EventRepository>;
   let participantService: jest.Mocked<ParticipantService>;
-  let exportService: jest.Mocked<ExportService>;
 
   const mockEvent = {
     _id: new Types.ObjectId(),
@@ -133,7 +132,6 @@ describe('EventService', () => {
     service = module.get<EventService>(EventService);
     repository = module.get(EventRepository);
     participantService = module.get(ParticipantService);
-    exportService = module.get(ExportService);
   });
 
   describe('getAllEvent', () => {
