@@ -105,8 +105,8 @@ describe(' EventController',() => {
         MockeEventService.findById.mockResolvedValue(mockEvent);
         const result=await controller.getEventById('event-id-1');
         expect(result).toBe(mockEvent)
-        expect(service.findById).toHaveBeenCalled;
-        expect(MockeEventService.findById).toHaveBeenCalled;
+        expect(service.findById).toHaveBeenCalled();
+        expect(MockeEventService.findById).toHaveBeenCalled();
     })
     it('it shoud trow error si id nont found',async()=>{
         MockeEventService.findById.mockRejectedValue(

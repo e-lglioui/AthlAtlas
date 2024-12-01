@@ -132,7 +132,7 @@ describe('EventService', () => {
 
     service = module.get<EventService>(EventService);
     repository = module.get(EventRepository);
-    exportService = module.get(ExportService);
+  
     participantService = module.get(ParticipantService);
   });
 
