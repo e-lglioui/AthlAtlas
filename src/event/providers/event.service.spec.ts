@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventService } from './event.service';
 import { EventRepository } from '../repositories/event.repository';
-import { ExportService } from '../../participants/services/export.service';
 import { ParticipantService } from '../../participants/providers/sparticipant.service';
 import { Event } from '../schemas/event.schema';
 import { Participant } from '../../participants/schemas/participant.schema';
