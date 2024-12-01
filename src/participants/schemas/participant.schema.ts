@@ -1,9 +1,18 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Schema as MongooseSchema } from 'mongoose';
+import { Document, Schema as MongooseSchema, Types } from 'mongoose';
 
 @Schema({
   collection: 'participants',
   timestamps: true,
+  toJSON: { 
+    virtuals: true,
+    transform: (doc, ret) => {
+      ret.id = ret._id;
+      delete ret._id;
+      delete ret.__v;
+      return ret;
+    }
+  }
 })
 export class Participant extends Document {
   @Prop({ required: true })
@@ -27,11 +36,16 @@ export class Participant extends Document {
   @Prop()
   gender: string;
 
-  @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'Event' }] })
-  events: MongooseSchema.Types.ObjectId[];
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'Event' }] })
+  events: Types.ObjectId[];
 
   createdAt: Date;
   updatedAt: Date;
 }
 
-export const ParticipantSchema = SchemaFactory.createForClass(Participant); 
+export const ParticipantSchema = SchemaFactory.createForClass(Participant);
+
+ParticipantSchema.pre('save', function(next) {
+  // Validation personnalisée si nécessaire
+  next();
+}); 

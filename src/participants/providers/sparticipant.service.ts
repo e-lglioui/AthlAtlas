@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException, Logger, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, Logger, Inject, forwardRef, BadRequestException } from '@nestjs/common';
 import { ClientSession, Schema, Types } from 'mongoose';
 import { ParticipantRepository } from '../repositories/participant.repository';
 import { CreateParticipantDto } from '../dtos/create-participant.dto';
@@ -92,8 +92,11 @@ export class ParticipantService {
 
   async getParticipantById(id: string): Promise<Participant> {
     try {
-      const objectId = this.toObjectId(id);
-      const participant = await this.participantRepository.findById(objectId.toString());
+      if (!id || !Types.ObjectId.isValid(id)) {
+        throw new NotFoundException(`Invalid participant ID format`);
+      }
+
+      const participant = await this.participantRepository.findById(id);
       if (!participant) {
         throw new ParticipantNotFoundException(id);
       }
@@ -132,15 +135,24 @@ export class ParticipantService {
     updateParticipantDto: UpdateParticipantDto
   ): Promise<Participant> {
     try {
-      const objectId = this.toObjectId(id);
-      const participant = await this.participantRepository.update(
-        objectId.toString(),
+      this.logger.debug(`Updating participant ${id}`);
+
+      if (!Types.ObjectId.isValid(id)) {
+        throw new BadRequestException('Invalid participant ID');
+      }
+
+      const existingParticipant = await this.participantRepository.findById(id);
+      if (!existingParticipant) {
+        throw new NotFoundException(`Participant with ID ${id} not found`);
+      }
+
+      const updatedParticipant = await this.participantRepository.update(
+        id,
         updateParticipantDto
       );
-      if (!participant) {
-        throw new ParticipantNotFoundException(id);
-      }
-      return participant;
+
+      this.logger.debug(`Successfully updated participant ${id}`);
+      return updatedParticipant;
     } catch (error) {
       this.logger.error(`Error updating participant ${id}: ${error.message}`);
       throw error;
@@ -217,6 +229,18 @@ export class ParticipantService {
       return !!participant;
     } catch (error) {
       this.logger.error(`Error checking email existence: ${error.message}`);
+      throw error;
+    }
+  }
+
+  async searchByName(name: string): Promise<Participant[]> {
+    try {
+      this.logger.debug(`Searching participants with name: ${name}`);
+      const participants = await this.participantRepository.searchByName(name);
+      this.logger.debug(`Found ${participants.length} participants matching name: ${name}`);
+      return participants;
+    } catch (error) {
+      this.logger.error(`Error searching participants by name: ${error.message}`);
       throw error;
     }
   }
