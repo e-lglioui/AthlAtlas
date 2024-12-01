@@ -1,3 +1,4 @@
+
 name: Tests
 
 on:
@@ -32,7 +33,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 2
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -96,8 +97,8 @@ jobs:
         with:
           fetch-depth: 0
       
-      - name: SonarCloud Scan
+      - name: SonarQube Cloud Scan
         uses: SonarSource/sonarcloud-github-action@master
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
