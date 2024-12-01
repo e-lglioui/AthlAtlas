@@ -4,7 +4,7 @@ import { ParticipantRepository } from '../repositories/participant.repository';
 import { EventService } from '../../event/providers/event.service';
 import { Participant } from '../schemas/participant.schema';
 import { Types } from 'mongoose';
-import { NotFoundException, ConflictException } from '@nestjs/common';
+import { ConflictException } from '@nestjs/common';
 import { ParticipantNotFoundException } from '../exceptions/participant.exception';
 
 describe('ParticipantService', () => {

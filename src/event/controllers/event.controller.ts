@@ -7,7 +7,6 @@ import {
     Body, 
     Param, 
     Query, 
-    NotFoundException ,
     UseGuards,
     Res,
     HttpStatus

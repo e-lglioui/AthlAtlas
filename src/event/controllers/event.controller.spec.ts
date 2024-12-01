@@ -2,7 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { EventController } from './event.controller';
 import { EventService } from '../providers/event.service';
-import { Event } from '../schemas/event.schema';
 import { CreateEventDto } from '../dtos/create-event.dto';
 import { UpdateEventDto } from '../dtos/update-event.dto';
 import {EventNotFoundException ,EventNameConflictException ,InvalidEventDateException} from '../exceptions/event.exception'
