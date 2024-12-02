@@ -7,7 +7,7 @@ export function validateObjectId(id: string): Types.ObjectId {
       throw new BadRequestException('Invalid ID format');
     }
     return new Types.ObjectId(id);
-  } catch (error) {
+  } catch  {
     throw new BadRequestException('Invalid ID format');
   }
 } 
