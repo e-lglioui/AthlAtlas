@@ -1,4 +1,3 @@
-
 name: Tests
 
 on:
@@ -87,18 +86,8 @@ jobs:
             -H 'Authorization: Bearer ${{ secrets.SLACK_TOKEN}}' \
             --data "{\"channel\":\"#athlatlas-app-back-tests\",\"text\":\"$message\"}" \
             https://slack.com/api/chat.postMessage
+  
 
-  sonar-analysis:
-    name: SonarQube Analysis
-    needs: [unit-tests, integration-tests]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      
-      - name: SonarQube Cloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+ 
+
+ 

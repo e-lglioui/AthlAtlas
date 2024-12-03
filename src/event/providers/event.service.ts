@@ -15,7 +15,6 @@ import { ParticipantService } from '../../participants/providers/sparticipant.se
 import { Participant } from '../../participants/schemas/participant.schema'; 
 import { ExportFormat } from '../../common/enums/export-format.enum';
 import * as fs from 'fs';
-import * as path from 'path';
 import { EventStatsDto } from '../dtos/event-stats.dto';
 import { Types } from 'mongoose';
 

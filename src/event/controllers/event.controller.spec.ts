@@ -2,7 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { EventController } from './event.controller';
 import { EventService } from '../providers/event.service';
-import { Event } from '../schemas/event.schema';
 import { CreateEventDto } from '../dtos/create-event.dto';
 import { UpdateEventDto } from '../dtos/update-event.dto';
 import {EventNotFoundException ,EventNameConflictException ,InvalidEventDateException} from '../exceptions/event.exception'
@@ -106,8 +105,8 @@ describe(' EventController',() => {
         MockeEventService.findById.mockResolvedValue(mockEvent);
         const result=await controller.getEventById('event-id-1');
         expect(result).toBe(mockEvent)
-        expect(service.findById).toHaveBeenCalled;
-        expect(MockeEventService.findById).toHaveBeenCalled;
+        expect(service.findById).toHaveBeenCalled();
+        expect(MockeEventService.findById).toHaveBeenCalled();
     })
     it('it shoud trow error si id nont found',async()=>{
         MockeEventService.findById.mockRejectedValue(

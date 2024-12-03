@@ -16,8 +16,7 @@ FROM node:20-alpine
 
 WORKDIR /app/
 
-ARG NODE_ENV=production
-ENV NODE_ENV=${NODE_ENV}
+ENV NODE_ENV=production
 
 COPY --from=build /app/dist ./dist
 

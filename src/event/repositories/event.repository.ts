@@ -46,7 +46,7 @@ async   getAllEvents(): Promise<Event[]> {
       return await this.eventModel
         .find({ userId: new Types.ObjectId(userId) })
         .sort({ startDate: -1 })
-        .populate('userId', 'username email')  // Optionnel : populate les infos de l'utilisateur
+        .populate('userId', 'username email')  
         .exec();
     } catch (error) {
       if (error.name === 'CastError') {

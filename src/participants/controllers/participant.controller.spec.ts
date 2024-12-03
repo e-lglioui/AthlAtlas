@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ParticipantController } from './participant.controller';
 import { ParticipantService } from '../providers/sparticipant.service';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException} from '@nestjs/common';
 import { Types } from 'mongoose';
 import { ParticipantNotFoundException } from '../exceptions/participant.exception';
 

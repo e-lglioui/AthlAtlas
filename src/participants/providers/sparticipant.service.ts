@@ -6,7 +6,6 @@ import { UpdateParticipantDto } from '../dtos/update-participant.dto';
 import { Participant } from '../schemas/participant.schema';
 import { 
   ParticipantNotFoundException,
-  ParticipantAlreadyExistsException 
 } from '../exceptions/participant.exception';
 import { EventService } from '../../event/providers/event.service';
 
@@ -23,7 +22,7 @@ export class ParticipantService {
   private toObjectId(id: string): Schema.Types.ObjectId {
     try {
       return new Schema.Types.ObjectId(id);
-    } catch (error) {
+    } catch  {
       throw new NotFoundException(`Invalid ID format: ${id}`);
     }
   }
@@ -201,7 +200,7 @@ export class ParticipantService {
 
   async deleteParticipantsByEventId(
     eventId: string,
-    session?: ClientSession
+  
   ): Promise<void> {
     try {
       const eventObjectId = this.toObjectId(eventId);
