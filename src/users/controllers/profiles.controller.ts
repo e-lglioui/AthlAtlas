@@ -1,6 +1,6 @@
 import { Controller, Get, Put, Body, Param, UseInterceptors } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { TransformInterceptor } from '../../utils/interceptors/transform.interceptor';
+import { TransformInterceptor } from '../../common/interceptors/transform.interceptor';
 import { ProfileService } from '../providers/profile.service';
 import { UpdateProfileDto } from '../dtos/update-profile.dto';
 import { Profile } from '../schemas/profile.schema';
