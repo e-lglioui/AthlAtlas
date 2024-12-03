@@ -118,7 +118,7 @@ import {
       @Res() res: Response,
     ) {
       try {
-        // Convertir le format en ExportFormat
+       
         let exportFormat: ExportFormat;
         switch (format) {
           case 'pdf':
